@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Rhea</title>
+    <meta name="viewport"
+        content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0,user-scalable=no,viewport-fit=cover" />
+    <meta name="theme-color" content="#d8c6ec" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <link rel="manifest" href="/manifest.webmanifest">
+
+    <link rel="icon" href="/public/images/xr-logo-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/public/images/xr-logo-192.png" />
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/public/css/rhea.css" />
+</head>
+
+<body>
+    <div class="shell" id="shell">
+        <canvas id="sc"></canvas>
+
+        <!-- ============ HEALTHCARE HEADER ============ -->
+        <div class="hc-header">
+            <div class="hc-logo">
+                <img src="/images/logo_1.png" alt="Logo" style="width: 48px; height: 48px; object-fit: contain;">
+            </div>
+            <button id="rheaPanelToggle" class="rhea-panel-toggle" type="button" aria-expanded="false"
+                aria-controls="rheaCockpitRoot" title="Open AI panel">
+                ‹
+            </button>
+            <div class="hc-profile-area-group">
+                <div class="hc-profile-area" id="hcProfileToggle">
+                    <span class="hc-doctor-name" id="hcDoctorName"></span>
+                    <div class="hc-profile-circle disconnected" id="hcProfileCircle">
+                        <div class="status-dot"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PROFILE POPUP ============ -->
+        <div class="hc-popup-overlay" id="hcPopupOverlay"></div>
+        <div class="hc-profile-popup" id="hcProfilePopup">
+            <div class="hc-popup-name" id="hcPopupName">Doctor</div>
+            <div class="hc-popup-scribe" id="hcPopupScribe">
+                AI Assistant: <span id="hcPopupScribeName">AIERIA</span>
+                <span class="status-badge online" id="hcPopupScribeBadge">Online</span>
+            </div>
+            <button class="hc-popup-btn connect-btn" id="hcPopupConnect">Connect</button>
+            <button class="hc-popup-btn logout-btn" id="hcPopupLogout">Log out</button>
+        </div>
+
+        <!-- ============ STANDALONE TRANSCRIPT OVERLAY (shown when stream popup is closed) ============ -->
+        <div class="hc-solo-transcript" id="hcSoloTranscript">
+            <div class="hc-transcript-prev" id="hcSoloTranscriptNext"></div>
+            <div class="hc-transcript-prev" id="hcSoloTranscriptPrev"></div>
+            <div class="hc-transcript-current" id="hcSoloTranscriptCurrent"></div>
+        </div>
+
+        <!-- ============ HOME: CENTER CONTENT ============ -->
+        <div class="hc-center-content" id="hcHomeContent">
+            <div class="hc-healthcare-logo" id="hcHealthcareLogo">
+                <img src="/images/logo_1.png" alt="Healthcare Logo"
+                    style="width: 200px; height: 200px; object-fit: contain;">
+            </div>
+            <div class="hc-app-title" id="hcAppTitle"><strong>Rhea</strong> Clinical Assistant</div>
+        </div>
+
+        <!-- ============ HOME WAVEFORM (shown when mic active on home screen) ============ -->
+        <div class="hc-home-wave" id="hcHomeWave">
+            <canvas id="hcHomeWaveCanvas" width="340" height="120"></canvas>
+        </div>
+
+        <!-- ============ BOTTOM NAV (3 buttons) ============ -->
+        <div class="hc-bottom-nav" id="hcBottomNav">
+            <button class="hc-nav-btn play-btn" id="hcPlayBtn" title="Start Stream">
+                <img src="/public/images/play_button.png" alt="Play" class="btn-icon">
+            </button>
+            <button class="hc-nav-btn orb-btn" id="hcOrbBtn" title="Voice Command">
+                <img src="/public/images/purple_orb.png" alt="Voice Command" class="orb-icon">
+            </button>
+            <button class="hc-nav-btn msg-btn" id="hcMsgBtn" title="Messages">
+                <img src="/public/images/message_button_button.png" alt="Messages" class="btn-icon">
+            </button>
+        </div>
+
+        <!-- ============ STREAM POPUP (FULLSCREEN) ============ -->
+        <div class="hc-stream-popup" id="hcStreamPopup">
+            <div class="hc-stream-video-wrap" id="hcStreamVideoWrap"></div>
+            <div class="hc-stream-overlay">
+                <div class="hc-stream-header">
+                    <div class="hc-logo">
+                        <img src="/images/logo_1.png" alt="Logo"
+                            style="width: 42px; height: 42px; object-fit: contain;">
+                    </div>
+                    <div class="hc-profile-area">
+                        <span class="hc-doctor-name" id="hcStreamDoctorName"></span>
+                        <div class="hc-profile-circle" id="hcStreamProfileCircle">
+                            <div class="status-dot"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hc-stream-wave" id="hcStreamWave">
+                    <canvas id="hcWaveCanvas" width="280" height="100"></canvas>
+                </div>
+
+                <div class="hc-stream-transcription" id="hcTranscription">
+                    <div class="hc-transcript-prev" id="hcTranscriptPrev"></div>
+                    <div class="hc-transcript-current" id="hcTranscriptCurrent"></div>
+                    <div class="hc-transcript-next" id="hcTranscriptNext"></div>
+                </div>
+
+
+                <div class="hc-summary-display" id="hcSummaryDisplay" style="display:none">
+                    <div class="hc-summary-text" id="hcSummaryText"></div>
+                </div>
+
+                <div class="hc-stream-controls">
+                    <button class="hc-stream-ctrl-btn" id="hcStreamMuteBtn">Mute</button>
+                    <button class="hc-stream-ctrl-btn" id="hcStreamHideBtn">Hide</button>
+                    <button class="hc-stream-ctrl-btn" id="hcStreamPauseBtn">Pause</button>
+                </div>
+
+                <div class="hc-stream-bottom-nav">
+                    <button class="hc-nav-btn play-btn" id="hcStreamPlayBtn" title="Stop Stream">
+                        <img src="/public/images/pause_button.png" alt="Pause" class="btn-icon">
+                    </button>
+                    <button class="hc-nav-btn orb-btn" id="hcStreamOrbBtn" title="Voice Command">
+                        <img src="/public/images/purple_orb.png" alt="Voice Command" class="orb-icon">
+                    </button>
+                    <button class="hc-nav-btn msg-btn" id="hcStreamMsgBtn" title="Messages">
+                        <img src="/public/images/message_button_button.png" alt="Messages" class="btn-icon">
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ MESSAGES POPUP ============ -->
+        <div class="hc-msg-popup" id="hcMsgPopup">
+            <div class="hc-msg-header">
+                <div class="hc-logo">
+                    <img src="/images/logo_1.png" alt="Logo" style="width: 42px; height: 42px; object-fit: contain;">
+                </div>
+                <div class="hc-profile-area">
+                    <span class="hc-doctor-name" id="hcMsgDoctorName"></span>
+                    <div class="hc-profile-circle" id="hcMsgProfileCircle">
+                        <div class="status-dot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hc-msg-body" id="hcMsgBody">
+                <div class="hc-msg-section" id="hcRecentMsgSection">
+                    <div class="hc-msg-section-title">Recent Messages</div>
+                    <div id="hcRecentMsgContent"></div>
+                </div>
+                <div class="hc-msg-section" id="hcMsgHistorySection">
+                    <div class="hc-msg-section-title">Message History</div>
+                    <div id="hcMsgHistoryContent"></div>
+                </div>
+            </div>
+
+            <div class="hc-msg-input-area">
+                <input type="text" class="hc-msg-input" id="hcMsgInput" placeholder="Type your message.....">
+                <button class="hc-msg-send-btn" id="hcMsgSendBtn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="hc-stream-bottom-nav">
+                <button class="hc-nav-btn play-btn" id="hcMsgPlayBtn" title="Start Stream">
+                    <img src="/public/images/play_button.png" alt="Play" class="btn-icon">
+                </button>
+                <button class="hc-nav-btn orb-btn" id="hcMsgOrbBtn" title="Voice Command">
+                    <img src="/public/images/purple_orb.png" alt="Voice Command" class="orb-icon">
+                </button>
+                <button class="hc-nav-btn msg-btn" id="hcMsgMsgBtn" title="Messages">
+                    <img src="/public/images/message_button_button.png" alt="Messages" class="btn-icon">
+                </button>
+            </div>
+        </div>
+
+        <!-- ============ RHEA SAME-PAGE AI PANEL ============ -->
+        <div id="rheaCockpitRoot" class="rhea-cockpit-root" aria-label="Rhea AI Note Workspace">
+            <div class="rhea-cockpit-main">
+                <main id="rightPane" class="rhea-cockpit-right">
+                    <div class="rhea-cockpit-header">
+                        <div class="scribe-soap-header">
+                            <select id="templateSelect"
+                                class="text-base md:text-lg font-semibold scribe-soap-title bg-transparent outline-none"
+                                aria-label="Select note template">
+                                <option value="">Select note type...</option>
+                            </select>
+
+                            <div class="rhea-cockpit-header-actions">
+                                <button id="ehrButton" class="ehr-button" title="Open EHR Patient Lookup"
+                                    aria-expanded="false" aria-controls="ehrSidebar">
+                                    EHR
+                                </button>
+                                <div id="totalEditsSlot" class="scribe-soap-edits" aria-label="Total edits"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="rightSplit" class="rhea-cockpit-split">
+                        <section id="soapPane" class="rhea-cockpit-top" aria-label="SOAP editor">
+                            <div id="liveTranscript" class="rhea-live-transcript scribe-scroll" aria-live="polite">
+                            </div>
+                            <div id="soapScroller" class="scribe-soap-scroll scribe-scroll"></div>
+
+                            <div id="soapActions" class="scribe-soap-actions">
+                                <button id="_scribe_clear" class="scribe-btn scribe-btn-ghost"
+                                    type="button">Clear</button>
+                                <button id="_scribe_add_ehr" class="scribe-btn scribe-add-ehr-disabled" type="button">
+                                    Add To EHR
+                                </button>
+                                <button id="_scribe_generate" class="scribe-btn scribe-btn-primary" type="button">
+                                    Generate
+                                </button>
+                            </div>
+                        </section>
+
+                        <section id="aiPane" class="rhea-cockpit-bottom" aria-label="AI Diagnosis">
+                            <div class="scribe-ai-head">
+                                <h2 class="text-base md:text-lg font-semibold scribe-ai-title">AI Diagnosis</h2>
+                            </div>
+
+                            <div id="aiDiagnosisBody" class="scribe-ai-body scribe-scroll">
+                                <div class="scribe-ai-empty">AI diagnosis not available yet.</div>
+                            </div>
+                        </section>
+                    </div>
+                </main>
+            </div>
+        </div>
+
+        <div id="ehrSidebar" class="ehr-sidebar" aria-label="EHR patient sidebar" aria-hidden="true">
+            <div class="resize-handle resize-handle-vertical ehr-resize-handle" data-resize="ehr-top" role="separator"
+                aria-orientation="vertical" aria-label="Resize EHR sidebar" tabindex="0"></div>
+
+            <div class="ehr-sidebar-header">
+                <div class="ehr-header-flex">
+                    <h2 class="ehr-header-title">EHR patient</h2>
+                    <span class="ehr-demo-badge">Demo</span>
+                    <button id="ehrCloseButton" class="ehr-close-button" title="Close" aria-label="Close EHR">×</button>
+                </div>
+            </div>
+
+            <div class="ehr-sidebar-content">
+                <div id="ehrInitialState" class="ehr-initial-state">
+                    <input type="text" id="mrnInput" class="ehr-input" placeholder="Enter Patient MRN" />
+                    <button id="mrnSearchButton" class="ehr-search-button">Search</button>
+                    <div id="ehrError" class="ehr-error" style="display:none;"></div>
+                </div>
+
+                <div id="ehrPatientState" class="ehr-patient-state" style="display:none;">
+                    <div class="ehr-card">
+                        <h4 class="ehr-card-title">Patient information</h4>
+                        <div class="ehr-patient-info ehr-patient-info-grid">
+                            <div class="ehr-info-pair">
+                                <span class="ehr-label-text">Name:</span>
+                                <span id="patientNameDisplay" class="ehr-value-text"></span>
+                            </div>
+                            <div class="ehr-info-pair">
+                                <span class="ehr-label-text">MRN:</span>
+                                <span id="patientMRNDisplay" class="ehr-value-text"></span>
+                            </div>
+                            <div class="ehr-info-pair">
+                                <span class="ehr-label-text">Email:</span>
+                                <span id="patientEmailDisplay" class="ehr-value-text"></span>
+                            </div>
+                            <div class="ehr-info-pair">
+                                <span class="ehr-label-text">Mobile:</span>
+                                <span id="patientMobileDisplay" class="ehr-value-text"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ehr-card">
+                        <h4 class="ehr-card-title">Clinical note</h4>
+                        <div id="notesList" class="ehr-notes-scroll"></div>
+                    </div>
+
+                    <div class="ehr-card">
+                        <div id="noteDetail" class="ehr-note-content">
+                            <div class="ehr-placeholder">Select a note to view details</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="ehrOverlay" class="ehr-overlay" aria-hidden="true"></div>
+
+        <!-- ============ OLD ORB (hidden, needed by device-canvas.js) ============ -->
+        <div class="orb-root" id="orbVisual">
+            <div class="halo"></div>
+            <div class="ground"></div>
+            <div class="ring-spin"></div>
+            <div class="ring-spin-border"></div>
+            <div class="ring-inner"></div>
+            <div class="sphere">
+                <div class="nebula"></div>
+                <canvas id="wc"></canvas>
+            </div>
+        </div>
+
+        <div class="resp" id="responseCard">
+            <div class="rtxt" id="responseText"></div>
+        </div>
+
+        <div class="mic-wrap">
+            <div class="mic-zone" id="micButton">
+                <div class="mic-btn" id="mb"></div>
+            </div>
+            <div class="mic-lbl" id="micInstruction"></div>
+        </div>
+
+        <div class="control-panel" id="controlPanel">
+            <div class="xr-id-section">
+                <input type="text" id="xrIdDisplay" class="xr-id-display" readonly placeholder="XR-ID" />
+                <div id="peerStatusDisplay" class="peer-status-display" style="display: none;">
+                    <span id="peerStatusText"></span>
+                </div>
+            </div>
+            <div class="manual-controls">
+                <button class="control-btn" id="manualStreamBtn" data-action="stream"><span>Start Stream</span></button>
+                <button class="control-btn" id="manualMuteBtn" data-action="mute"><span>Mute</span></button>
+                <button class="control-btn" id="manualVideoBtn" data-action="video"><span>Hide Video</span></button>
+                <button class="control-btn audio-btn-panel" id="btnAudio" disabled><span
+                        id="audioLabel">Audio</span></button>
+            </div>
+            <div class="messages-section">
+                <div class="messages-header">Messages</div>
+                <div class="messages-list" id="visibleMsgList"></div>
+                <div class="message-input-section">
+                    <input type="text" id="visibleMsgInput" class="msg-input" placeholder="Type a message..." />
+                    <label class="urgent-checkbox"><input type="checkbox"
+                            id="visibleChkUrgent" /><span>Urgent</span></label>
+                    <button class="send-btn" id="visibleBtnSend">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="toast" id="toast"></div>
+
+        <!-- Hidden functional elements for ui.js (UNCHANGED) -->
+        <div id="status" class="status status-disconnected" hidden>Status: Disconnected</div>
+        <div id="chipLastCmd" hidden>Heard: ...</div>
+        <div id="bdot" class="bdot off" hidden></div>
+        <span id="btxt" class="btxt off" hidden>DISCONNECTED</span>
+
+        <div class="hidden-controls" hidden>
+            <input id="deviceXrIdInput" placeholder="Enter Device XR ID (e.g. 1234)" />
+            <button id="btnConnect">Connect</button>
+            <button id="btnStream">Start Stream</button>
+            <button id="btnMute">Mute</button>
+            <button id="btnVideo">Hide Video</button>
+            <button id="btnVoice">Start Voice</button>
+            <button id="btnStartRec">Start Recording</button>
+            <button id="btnStopRec">Stop Recording</button>
+        </div>
+
+        <video id="preview" autoplay playsinline webkit-playsinline muted hidden></video>
+        <div id="noStream" hidden>Stream not ready</div>
+
+        <div class="hidden-controls" hidden>
+            <div id="msgList"></div>
+            <input id="msgInput" placeholder="Type a message..." />
+            <input id="chkUrgent" type="checkbox" />
+            <button id="btnSend">Send</button>
+        </div>
+
+        <!-- Old logout button (hidden, but ID preserved for existing logout handler) -->
+        <button id="logoutBtn" class="old-logout" hidden></button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/public/js/config.js"></script>
+    <script src="/public/js/device-canvas.js"></script>
+    <script type="module" src="/public/js/rhea.js"></script>
+    <script src="/public/js/rhea-cockpit.js"></script>
+    <script src="/public/js/device-healthcare-ui.js"></script>
+
+    <script>
+        async function maybeRegisterSW() {
+            if (!('serviceWorker' in navigator)) return;
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return;
+            if (!location.pathname.startsWith('/rhea')) return;
+            try {
+                const response = await fetch('/sw.js', { method: 'HEAD' });
+                if (response.status !== 200) return;
+                const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+                console.log('[SW] Registered successfully', registration.scope);
+            } catch (err) {
+                console.warn('[SW] Registration failed:', err.message);
+            }
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', maybeRegisterSW);
+        } else {
+            maybeRegisterSW();
+        }
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.querySelector('[data-install]');
+            if (btn) btn.style.display = 'inline-flex';
+        });
+        document.querySelector('[data-install]')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+    </script>
+
+    <script>
+        (function () {
+            function handleXrLogout() {
+                console.log('[RHEA] Platform logout detected, closing tab');
+                try { window.close(); } catch (e) { }
+                setTimeout(function () { window.location.href = '/platform'; }, 300);
+            }
+            try {
+                if (typeof BroadcastChannel !== 'undefined') {
+                    var ch = new BroadcastChannel('xr_platform_auth');
+                    ch.onmessage = function (e) {
+                        if (e.data && e.data.type === 'xr_logout') handleXrLogout();
+                    };
+                } else {
+                    window.addEventListener('storage', function (e) {
+                        if (e.key === 'xr_logout_signal') handleXrLogout();
+                    });
+                }
+            } catch (err) {
+                console.warn('[RHEA] Logout listener setup failed:', err);
+            }
+        })();
+    </script>
+
+    <script>
+        var logoutBtn = document.getElementById('logoutBtn');
+        var hcPopupLogout = document.getElementById('hcPopupLogout');
+
+        function doLogout() {
+            (async function () {
+                try {
+                    console.log('[RHEA] Manual logout initiated');
+                    try {
+                        sessionStorage.removeItem('XR_DEVICE_LAST_XR_ID_UI');
+                        sessionStorage.removeItem('xr-device-id');
+                    } catch (e) { }
+                    var response = await fetch('/api/platform/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include'
+                    });
+                    var data = await response.json();
+                    history.replaceState(null, '', '/platform');
+                    window.location.replace('/platform');
+                } catch (err) {
+                    console.error('[RHEA] Logout error:', err);
+                    try {
+                        sessionStorage.removeItem('XR_DEVICE_LAST_XR_ID_UI');
+                        sessionStorage.removeItem('xr-device-id');
+                    } catch (e) { }
+                    history.replaceState(null, '', '/platform');
+                    window.location.replace('/platform');
+                }
+            })();
+        }
+
+        if (logoutBtn) logoutBtn.addEventListener('click', doLogout);
+        if (hcPopupLogout) hcPopupLogout.addEventListener('click', doLogout);
+    </script>
+    <script>
+        (function () {
+            if (window.__rheaUiWired) return;
+            window.__rheaUiWired = true;
+
+            const $ = (id) => document.getElementById(id);
+
+            const ehrSidebar = $('ehrSidebar');
+            const ehrOverlay = $('ehrOverlay');
+            const ehrButton = $('ehrButton');
+
+            function syncEhrState() {
+                const open = ehrSidebar && ehrSidebar.classList.contains('active');
+
+                document.body.classList.toggle('ehr-open', open);
+
+                if (ehrSidebar) ehrSidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
+                if (ehrOverlay) ehrOverlay.setAttribute('aria-hidden', open ? 'false' : 'true');
+                if (ehrButton) ehrButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+                if (ehrOverlay) ehrOverlay.style.pointerEvents = 'none';
+            }
+
+            if (ehrSidebar) {
+                new MutationObserver(syncEhrState)
+                    .observe(ehrSidebar, { attributes: true, attributeFilter: ['class'] });
+                syncEhrState();
+            }
+
+            if (ehrOverlay) {
+                ehrOverlay.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            }
+        })();
+    </script>
+
+    <script>
+        (function () {
+            fetch('/api/platform/me', {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'no-store',
+                headers: { 'Accept': 'application/json', 'Cache-Control': 'no-cache' }
+            }).then(function (res) {
+                if (res.status === 401 || res.status === 403) {
+                    console.log('[RHEA] Not authenticated, redirecting to login');
+                    history.replaceState(null, '', '/platform');
+                    window.location.replace('/platform');
+                }
+            }).catch(function () {
+                console.warn('[RHEA] Session check failed, redirecting to login');
+                history.replaceState(null, '', '/platform');
+                window.location.replace('/platform');
+            });
+        })();
+    </script>
+
+</body>
+
+</html>
