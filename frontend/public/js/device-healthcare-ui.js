@@ -698,4 +698,69 @@
   }
 
   setInterval(syncTranscripts, 300);
+
+  (function wireLeftSwipe() {
+    var SWIPE_MIN_X = 60;
+    var SWIPE_MAX_Y = 80;
+
+    var touchStartX = 0;
+    var touchStartY = 0;
+    var touchStartTime = 0;
+
+    function onTouchStart(e) {
+      var t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = Date.now();
+    }
+
+    function onTouchEnd(e) {
+      var t = e.changedTouches[0];
+      var dx = t.clientX - touchStartX;
+      var dy = t.clientY - touchStartY;
+      var dt = Date.now() - touchStartTime;
+
+      if (dt > 600) return;
+      if (Math.abs(dy) > SWIPE_MAX_Y) return;
+      if (dx >= -SWIPE_MIN_X) return;
+
+      triggerLeftSwipeFlow();
+    }
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+
+    function triggerLeftSwipeFlow() {
+      var panelRoot = document.getElementById('rheaCockpitRoot');
+      var ehrSidebar = document.getElementById('ehrSidebar');
+      var ehrOverlay = document.getElementById('ehrOverlay');
+      var ehrButton = document.getElementById('ehrButton');
+
+      if (panelRoot) {
+        panelRoot.classList.add('active');
+        var toggle = document.getElementById('rheaPanelToggle');
+        if (toggle) {
+          toggle.classList.add('is-open');
+          toggle.setAttribute('aria-expanded', 'true');
+          toggle.setAttribute('title', 'Close AI panel');
+        }
+      }
+
+      if (ehrSidebar) {
+        ehrSidebar.classList.add('active');
+        ehrSidebar.setAttribute('aria-hidden', 'false');
+      }
+      if (ehrOverlay) {
+        ehrOverlay.classList.add('active');
+        ehrOverlay.setAttribute('aria-hidden', 'false');
+      }
+      if (ehrButton) {
+        ehrButton.setAttribute('aria-expanded', 'true');
+      }
+
+      if (window.RheaCockpit && typeof window.RheaCockpit.generateAiDiagnosisForActiveTranscript === 'function') {
+        window.RheaCockpit.generateAiDiagnosisForActiveTranscript();
+      }
+    }
+  })();
 })();
