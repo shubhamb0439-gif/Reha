@@ -1842,7 +1842,8 @@ function initAssignUsersDualView() {
         );
 
 
-        const sName = escapeHtml(s.name || s.full_name || 'N/A');
+        const sNameRaw = s.name || s.full_name || 'N/A';
+        const sName = escapeHtml(sNameRaw === 'AIERIA' ? 'AI Scribe' : sNameRaw);
         const sEmail = escapeHtml(s.email || 'N/A');
         const sXrId = escapeHtml(s.xrId || s.xr_id || 'N/A');
 
@@ -3376,7 +3377,8 @@ async function loadAssignUsersTable() {
           const effectiveProviderId =
             p.id ?? m.provider_user_id ?? m.providerId ?? m.provider_userId ?? '';
 
-          const sName = s.name || s.full_name || 'N/A';
+          const sNameRaw = s.name || s.full_name || 'N/A';
+          const sName = sNameRaw === 'AIERIA' ? 'AI Scribe' : sNameRaw;
           const sEmail = s.email || 'N/A';
           const sXrId = s.xrId || s.xr_id || 'N/A';
 
