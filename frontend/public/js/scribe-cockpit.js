@@ -1548,22 +1548,8 @@
 
     setActiveTranscriptId(item.id);
 
-    const detected = autoDetectFromTranscript(text);
-
-    if (detected.noteType && dom.templateSelect) {
-      dom.templateSelect.value = detected.noteType;
-      // Trigger change event to generate note
-      dom.templateSelect.dispatchEvent(new Event('change'));
-    } else {
-      // Don't automatically generate note - user must select template first
-      // Clear the SOAP note area and show a prompt
-      renderSoapBlank();
-      clearAiDiagnosisPaneUi();
-    }
-
-    if (detected.mrn) {
-      automateEHRWorkflow(detected.mrn);
-    }
+    renderSoapBlank();
+    clearAiDiagnosisPaneUi();
   }
 
   // =============================================================================
@@ -3364,10 +3350,6 @@
       if (state.mrnAutomationTimer) {
         clearTimeout(state.mrnAutomationTimer);
       }
-      state.mrnAutomationTimer = setTimeout(() => {
-        console.log('[Transcript] Triggering continuousMRNDetection after 500ms delay');
-        continuousMRNDetection();
-      }, 500);
 
       return;
     }

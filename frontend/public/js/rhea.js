@@ -1537,6 +1537,36 @@ function setupSR() {
     };
     return true;
 }
+let _rheaMicStream = null;
+let _rheaMicAudioCtx = null;
+let _rheaMicSource = null;
+
+function _startRheaWaveformMic() {
+    if (_rheaMicStream) return;
+    if (!window._xrCanvas) return;
+    navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function (stream) {
+        _rheaMicStream = stream;
+        _rheaMicAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        var src = _rheaMicAudioCtx.createMediaStreamSource(stream);
+        var analyser = _rheaMicAudioCtx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(analyser);
+        _rheaMicSource = src;
+        window._xrCanvas.analyser = analyser;
+        window._xrCanvas.dataArr = new Uint8Array(analyser.frequencyBinCount);
+        window._xrCanvas.listening = true;
+    }).catch(function () {
+        if (window._xrCanvas) window._xrCanvas.listening = true;
+    });
+}
+
+function _stopRheaWaveformMic() {
+    if (window._xrCanvas) window._xrCanvas.listening = false;
+    try { if (_rheaMicSource) { _rheaMicSource.disconnect(); _rheaMicSource = null; } } catch (e) {}
+    try { if (_rheaMicAudioCtx) { _rheaMicAudioCtx.close(); _rheaMicAudioCtx = null; } } catch (e) {}
+    try { if (_rheaMicStream) { _rheaMicStream.getTracks().forEach(function (t) { t.stop(); }); _rheaMicStream = null; } } catch (e) {}
+}
+
 function startVoiceRecognition() {
     if (!setupSR()) {
         msg('System', 'Voice API not available in this browser');
@@ -1552,6 +1582,7 @@ function startVoiceRecognition() {
     micActive = true;
     micActiveSince = Date.now();
     window._hcVoiceActive = true;
+    _startRheaWaveformMic();
 
     try {
         rec.start();
@@ -1567,6 +1598,7 @@ function startVoiceRecognition() {
             msg('System', 'Failed to start voice: ' + e.message);
             isListening = false;
             window._hcVoiceActive = false;
+            _stopRheaWaveformMic();
             if (orbUI) orbUI.syncVoiceState(false);
         }
 
@@ -1583,6 +1615,7 @@ function stopVoiceRecognition() {
     isListening = false;
     micActive = false;
     window._hcVoiceActive = false;
+    _stopRheaWaveformMic();
 
     try {
         if (rec) {
@@ -2122,16 +2155,16 @@ function updateXrIdDisplay() {
     if (!xrIdDisplay) return;
 
     if (ANDROID_XR_ID) {
-        // ✅ Priority 1: Show full name if available
         const fullName = fullNameForXrId(ANDROID_XR_ID);
-        if (fullName && fullName !== ANDROID_XR_ID) {
-            xrIdDisplay.value = fullName;
-            console.log('[UI] XR ID Display updated to Full Name:', fullName);
-        } else {
-            // ✅ Fallback: Show XR ID if full name not yet available
-            xrIdDisplay.value = ANDROID_XR_ID;
-            console.log('[UI] XR ID Display updated to XR ID:', ANDROID_XR_ID);
-        }
+        const displayValue = (fullName && fullName !== ANDROID_XR_ID) ? fullName : ANDROID_XR_ID;
+        xrIdDisplay.value = displayValue;
+
+        const hcDoctorNameEl = document.getElementById('hcDoctorName');
+        if (hcDoctorNameEl) hcDoctorNameEl.textContent = displayValue;
+        const hcStreamDoctorNameEl = document.getElementById('hcStreamDoctorName');
+        if (hcStreamDoctorNameEl) hcStreamDoctorNameEl.textContent = displayValue;
+        const hcPopupNameEl = document.getElementById('hcPopupName');
+        if (hcPopupNameEl) hcPopupNameEl.textContent = displayValue || 'Doctor';
     } else {
         xrIdDisplay.value = '';
     }

@@ -1533,7 +1533,7 @@ function initAssignUsersDualView() {
                 <td class="py-3 text-sm">${pXrId}</td>
                 <td class="py-3 text-sm">${clinicName}</td>
                 <td class="py-3 text-sm"></td>
-                <td class="py-3 text-sm">AIERIA</td>
+                <td class="py-3 text-sm">AI Scribe</td>
                 <td class="py-3 text-right whitespace-nowrap">
                   <button class="unmapped-provider-save px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs shrink-0"
                           ${canWrite ? '' : 'disabled'}>
@@ -1897,7 +1897,7 @@ function initAssignUsersDualView() {
     <div class="flex items-center gap-2 justify-end">
       ${isRheaProvider ? `
   <span class="px-2 py-1 rounded bg-slate-700 text-gray-300 text-xs">
-    AIERIA
+    AI Scribe
   </span>
 ` : `
   <button class="provider-inline-edit px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs"
@@ -3454,7 +3454,7 @@ async function loadAssignUsersTable() {
                 <div class="flex items-center gap-2 justify-end">
 ${isRheaProvider ? `
   <span class="px-2 py-1 rounded bg-slate-700 text-gray-300 text-xs">
-    AIERIA
+    AI Scribe
   </span>
 ` : `
   <button class="assign-inline-edit px-2 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs"
