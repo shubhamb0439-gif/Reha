@@ -1035,6 +1035,7 @@
         state.transcriptItems.push(item);
         state.activeTranscriptId = item.id;
 
+        addNoteToHistory(item);
         renderTranscriptList();
         openPanel();
 
@@ -1059,11 +1060,129 @@
         await appendTranscriptItem(payload);
     }
 
+    function wireNoteHistoryPanel() {
+        const nhPanel = document.getElementById('rheaNoteHistory');
+        const nhToggle = document.getElementById('rheaNoteHistoryToggle');
+        const nhResize = document.getElementById('rheaNhResize');
+
+        if (!nhPanel || !nhToggle) return;
+
+        nhToggle.addEventListener('click', function () {
+            const isCollapsed = nhPanel.classList.toggle('collapsed');
+            nhToggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            nhToggle.title = isCollapsed ? 'Expand Note History' : 'Collapse Note History';
+        });
+
+        if (!nhResize) return;
+
+        var dragging = false;
+        var startX = 0;
+        var startW = 0;
+
+        nhResize.addEventListener('pointerdown', function (e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+            nhResize.setPointerCapture(e.pointerId);
+            dragging = true;
+            startX = e.clientX;
+            startW = nhPanel.getBoundingClientRect().width;
+            document.body.classList.add('is-resizing');
+            document.body.setAttribute('data-resize-orientation', 'vertical');
+        });
+
+        nhResize.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            var dx = e.clientX - startX;
+            var newW = Math.max(120, Math.min(400, startW + dx));
+            document.documentElement.style.setProperty('--rhea-nh-w', newW + 'px');
+            if (newW < 130 && !nhPanel.classList.contains('collapsed')) {
+                nhPanel.classList.add('collapsed');
+            } else if (newW >= 130 && nhPanel.classList.contains('collapsed')) {
+                nhPanel.classList.remove('collapsed');
+            }
+        });
+
+        nhResize.addEventListener('pointerup', function () {
+            dragging = false;
+            document.body.classList.remove('is-resizing');
+            document.body.removeAttribute('data-resize-orientation');
+        });
+    }
+
+    function wireRheaSoapAiResize() {
+        var handle = document.querySelector('.rhea-soap-ai-resize');
+        var soapPane = document.getElementById('soapPane');
+        if (!handle || !soapPane) return;
+
+        var dragging = false;
+        var startY = 0;
+        var startH = 0;
+
+        handle.addEventListener('pointerdown', function (e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+            e.preventDefault();
+            handle.setPointerCapture(e.pointerId);
+            dragging = true;
+            startY = e.clientY;
+            startH = soapPane.getBoundingClientRect().height;
+            document.body.classList.add('is-resizing');
+            document.body.setAttribute('data-resize-orientation', 'horizontal');
+        });
+
+        handle.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            var dy = e.clientY - startY;
+            var newH = Math.max(160, Math.min(600, startH + dy));
+            document.documentElement.style.setProperty('--rhea-soap-h', newH + 'px');
+        });
+
+        handle.addEventListener('pointerup', function () {
+            dragging = false;
+            document.body.classList.remove('is-resizing');
+            document.body.removeAttribute('data-resize-orientation');
+        });
+    }
+
+    function addNoteToHistory(item) {
+        var list = document.getElementById('rheaNoteHistoryList');
+        if (!list) return;
+
+        var empty = list.querySelector('.rhea-nh-empty');
+        if (empty) empty.remove();
+
+        var time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        var preview = String(item.text || '').slice(0, 60);
+
+        var el = document.createElement('div');
+        el.className = 'rhea-nh-item' + (item.id === state.activeTranscriptId ? ' active' : '');
+        el.dataset.id = item.id;
+        el.innerHTML =
+            '<div class="rhea-nh-item-title">' + escapeHtml(time || 'Note') + '</div>' +
+            '<div class="rhea-nh-item-meta">' + escapeHtml(preview) + '</div>';
+
+        el.addEventListener('click', function () {
+            state.activeTranscriptId = item.id;
+            list.querySelectorAll('.rhea-nh-item').forEach(function (n) { n.classList.remove('active'); });
+            el.classList.add('active');
+            if (item.note && Object.keys(item.note).length) {
+                state.latestSoapNote = item.note;
+                renderSoapNote(state.latestSoapNote);
+            } else {
+                renderSoapBlank();
+            }
+            renderAiDiagnosisUi();
+        });
+
+        list.insertBefore(el, list.firstChild);
+    }
+
     function init() {
         ensureUiStyles();
         initTemplateDropdown();
         wireEhrEvents();
         wireSoapActionButtons();
+        wireNoteHistoryPanel();
+        wireRheaSoapAiResize();
         renderSoapBlank();
         clearAiDiagnosisPaneUi();
         if (dom.panelRoot) {
@@ -1076,6 +1195,7 @@
 
     window.RheaCockpit = {
         handleTranscript,
-        generateAiDiagnosisForActiveTranscript
+        generateAiDiagnosisForActiveTranscript,
+        addNoteToHistory
     };
 })();

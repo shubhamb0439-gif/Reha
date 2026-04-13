@@ -857,15 +857,20 @@ html,body{
 /* =========================
    RHEA SAME-PAGE AI PANEL
    ========================= */
+
+/* Root container — slides in from right on swipe */
 .rhea-cockpit-root{
   position:absolute;
-  inset:88px 16px 120px 16px;
+  inset:88px 0 114px 0;
   z-index:15;
-  display:block;
+  display:flex;
+  flex-direction:row;
   opacity:0;
   transform:translateX(110%);
   pointer-events:none;
   transition:transform 0.28s ease, opacity 0.22s ease;
+  border-radius:0;
+  overflow:hidden;
 }
 
 .rhea-cockpit-root.active{
@@ -874,40 +879,167 @@ html,body{
   pointer-events:auto;
 }
 
-.rhea-cockpit-main{
-  width:100%;
-  height:100%;
-  min-height:0;
-}
-
-.rhea-cockpit-right{
-  width:100%;
-  height:100%;
+/* ---- Note History left panel ---- */
+.rhea-note-history{
+  position:relative;
+  flex:0 0 var(--rhea-nh-w, 220px);
+  min-width:0;
   min-height:0;
   display:flex;
   flex-direction:column;
-  background:rgba(17,24,39,0.78);
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,0.10);
-  border-radius:20px;
+  background:rgba(3,7,16,0.96);
+  border-right:1px solid rgba(255,255,255,0.06);
   overflow:hidden;
-  box-shadow:0 20px 50px rgba(0,0,0,0.20);
+  transition:flex-basis 0.25s ease;
 }
-.rhea-cockpit-right::before{
+
+/* Collapsed state */
+.rhea-note-history.collapsed{
+  flex-basis:0 !important;
+  min-width:0;
+}
+
+/* Toggle arrow button */
+.rhea-nh-toggle{
+  position:absolute;
+  top:50%;
+  right:-14px;
+  transform:translateY(-50%);
+  z-index:10;
+  width:26px;
+  height:48px;
+  border:1px solid rgba(255,255,255,0.12);
+  border-radius:0 8px 8px 0;
+  background:#0f1724;
+  color:#94a3b8;
+  font-size:16px;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:background 0.2s, color 0.2s, transform 0.25s ease;
+  line-height:1;
+  padding:0;
+}
+
+.rhea-nh-toggle:hover{
+  background:#1e2d40;
+  color:#fff;
+}
+
+/* When collapsed, rotate the arrow to point right */
+.rhea-note-history.collapsed .rhea-nh-toggle{
+  transform:translateY(-50%) rotate(180deg);
+  right:-26px;
+}
+
+.rhea-nh-head{
+  padding:10px 12px;
+  background:rgba(0,0,0,0.22);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  flex-shrink:0;
+}
+
+.rhea-nh-title{
+  margin:0;
+  font-size:13px;
+  font-weight:700;
+  color:rgba(255,255,255,0.90);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.rhea-nh-body{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  padding:10px 10px;
+}
+
+.rhea-nh-empty{
+  font-size:12px;
+  color:rgba(148,163,184,0.7);
+  padding:12px 4px;
+  text-align:center;
+}
+
+.rhea-nh-item{
+  background:#1f2937;
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:8px;
+  cursor:pointer;
+  transition:background 0.15s;
+}
+
+.rhea-nh-item:hover{ background:#253045; }
+.rhea-nh-item.active{ background:#1e3a5f; border-color:rgba(99,102,241,0.5); }
+
+.rhea-nh-item-title{
+  font-size:12px;
+  font-weight:700;
+  color:#e5e7eb;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  margin-bottom:2px;
+}
+
+.rhea-nh-item-meta{
+  font-size:11px;
+  color:#6b7280;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ---- Vertical resize handle between Note History and right pane ---- */
+.rhea-nh-resize{
+  flex:0 0 6px;
+  min-width:6px;
+  cursor:col-resize;
+  background:rgba(255,255,255,0.04);
+  position:relative;
+  transition:background 0.15s;
+  touch-action:none;
+}
+
+.rhea-nh-resize:hover,
+.rhea-nh-resize:active{
+  background:rgba(99,102,241,0.18);
+}
+
+.rhea-nh-resize::after{
   content:"";
   position:absolute;
-  inset:0;
-  pointer-events:none;
-  border-radius:20px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:2px;
+  height:40px;
+  border-radius:999px;
+  background:linear-gradient(to bottom, rgba(255,255,255,0.08), rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+  border-radius:6px;
+}
+
+/* ---- Right pane — matches scribe-cockpit exactly ---- */
+.rhea-cockpit-right{
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  background:#111827;
+  overflow:hidden;
 }
 
 .rhea-cockpit-header{
-  position:sticky;
-  top:0;
-  z-index:5;
-  padding:12px 14px;
-  background:rgba(15,23,42,0.88);
+  flex-shrink:0;
+  padding:10px 14px;
+  background:rgba(15,23,42,0.95);
   border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
@@ -919,8 +1051,8 @@ html,body{
 }
 
 .rhea-cockpit-top{
-  flex:0 0 62%;
-  min-height:240px;
+  flex:0 0 var(--rhea-soap-h, 58%);
+  min-height:220px;
   overflow:hidden;
   display:flex;
   flex-direction:column;
@@ -932,17 +1064,61 @@ html,body{
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  background:rgba(0,0,0,0.08);
+  background:rgba(0,0,0,0.10);
   border-top:1px solid rgba(255,255,255,0.06);
 }
 
-.rhea-live-transcript{
-  max-height:150px;
-  overflow-y:auto;
-  padding:12px;
-  border-bottom:1px solid rgba(255,255,255,0.06);
-  background:rgba(2,6,23,0.45);
+/* Transcript hidden from view — data stays in DOM for JS */
+.rhea-live-transcript-hidden{
+  display:none !important;
+  visibility:hidden;
+  height:0;
+  overflow:hidden;
 }
+
+/* Horizontal resize handle between SOAP and AI */
+.rhea-soap-ai-resize{
+  flex-shrink:0;
+}
+
+/* Hide collapsed note history resize handle */
+.rhea-note-history.collapsed + .rhea-nh-resize{
+  display:none;
+}
+
+/* Resize handle shared style for SOAP/AI split */
+.resize-handle{
+  position:relative;
+  background:rgba(255,255,255,0.05);
+  transition:background 0.15s ease;
+  outline:none;
+  touch-action:none;
+  flex-shrink:0;
+}
+.resize-handle:hover,
+.resize-handle:focus{
+  background:rgba(99,102,241,0.18);
+}
+.resize-handle-horizontal{
+  height:8px;
+  cursor:row-resize;
+  width:100%;
+}
+.resize-handle-horizontal::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:40px;
+  height:2px;
+  border-radius:6px;
+  opacity:0.7;
+  background:linear-gradient(to right,rgba(255,255,255,0.08),rgba(255,255,255,0.22),rgba(255,255,255,0.08));
+}
+
+body.is-resizing{ user-select:none; }
+body.is-resizing *{ user-select:none !important; }
 
 .scribe-scroll::-webkit-scrollbar{ width:10px; height:10px; }
 .scribe-scroll::-webkit-scrollbar-track{ background:#0b0f19; border-radius:10px; }
@@ -1532,13 +1708,13 @@ html,body{
 }
 
 @media (max-width: 768px){
-
-    #templateSelect{
+  #templateSelect{
     width:100% !important;
     max-width:100% !important;
     min-width:0 !important;
   }
-    .scribe-soap-header{
+
+  .scribe-soap-header{
     gap:10px;
   }
 
@@ -1551,18 +1727,29 @@ html,body{
     padding:0 10px;
     font-size:12px;
   }
-    .rhea-panel-toggle{
+
+  .rhea-panel-toggle{
     right:86px;
     width:32px;
     height:32px;
     font-size:22px;
   }
+
   .rhea-cockpit-root{
-    inset:78px 10px 110px 10px;
+    inset:72px 0 108px 0;
   }
 
-  .rhea-cockpit-right{
-    border-radius:16px;
+  /* Collapse Note History by default on small screens */
+  .rhea-note-history{
+    flex-basis:0 !important;
+  }
+
+  .rhea-note-history.expanded-mobile{
+    flex-basis:180px !important;
+  }
+
+  .rhea-nh-resize{
+    display:none;
   }
 
   .scribe-soap-actions{
