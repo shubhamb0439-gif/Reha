@@ -60,6 +60,7 @@ async function fetchLoggedInXrIdFromSession() {
                 const myXrId = (data?.xrId || '').trim();
                 if (myFullName && myXrId) {
                     rememberXrName(myXrId, myFullName);
+                    updateXrIdDisplay();
                 }
             } catch { }
 

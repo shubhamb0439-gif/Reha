@@ -1028,7 +1028,7 @@ function initAssignUsersTopPanel() {
         }
 
         showToast(
-          data.message || (isRheaProvider ? 'RHEA provider saved as AIERIA' : 'Mapping saved successfully'),
+          data.message || (isRheaProvider ? 'RHEA provider saved as AI Scribe' : 'Mapping saved successfully'),
           'success'
         );
 
@@ -1659,7 +1659,7 @@ function initAssignUsersDualView() {
           if (!res.ok || !out.ok) throw new Error(out.message || 'Failed to save assignment');
 
           showToast(
-            out.message || (isRheaProvider ? 'RHEA provider saved as AIERIA' : 'Assignment saved'),
+            out.message || (isRheaProvider ? 'RHEA provider saved as AI Scribe' : 'Assignment saved'),
             'success'
           );
 
@@ -1985,7 +1985,7 @@ function initAssignUsersDualView() {
       const editBtn = e.target.closest('[data-action="provider-row-edit"]');
       if (editBtn) {
         if (isRheaProvider) {
-          showToast('RHEA provider uses AIERIA. Manual scribe edit is not required.', 'error');
+          showToast('RHEA provider uses AI Scribe. Manual scribe edit is not required.', 'error');
           return;
         }
 
@@ -3104,6 +3104,16 @@ function buildProviderOptionsHtml(selectedClinicId, selectedProviderId) {
   return opts.join('');
 }
 
+function buildAllProviderOptionsHtml(selectedProviderId) {
+  const providersAll = Array.isArray(assignUsersOptions.providers) ? assignUsersOptions.providers : [];
+  const opts = ['<option value="">Select Provider</option>'];
+  providersAll.forEach((p) => {
+    const pid = p.id;
+    const selected = String(pid) === String(selectedProviderId) ? 'selected' : '';
+    opts.push(`<option value="${escapeHtmlInline(pid)}" ${selected}>${escapeHtmlInline(formatUserDropdownLabel(p))}</option>`);
+  });
+  return opts.join('');
+}
 
 async function loadAssignUsersTable() {
   try {
@@ -3421,25 +3431,19 @@ async function loadAssignUsersTable() {
                 </span>
               </td>
 
-              <!-- 5) Clinic (VIEW default, EDIT dropdown hidden) -->
+              <!-- 5) Clinic (VIEW only) -->
               <td class="py-3">
                 <span class="assign-view-clinic text-sm">${escapeHtmlInline(clinicName)}</span>
-
-                <select class="assign-inline-clinic hidden px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white text-xs"
-                        ${canWrite ? '' : 'disabled'}
-                        title="${canWrite ? '' : 'Read-only access'}">
-                  ${buildClinicOptionsHtml(currentClinicId)}
-                </select>
               </td>
 
               <!-- 6) Provider Name (VIEW default, EDIT dropdown hidden) -->
               <td class="py-3">
                 <span class="assign-view-provider">${escapeHtmlInline(pName)}</span>
 
-                <select class="assign-inline-provider hidden px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white text-xs"
+                <select class="assign-inline-provider hidden px-2 py-1 rounded bg-gray-700 border border-gray-600 text-white text-xs w-52"
                         ${canWrite ? '' : 'disabled'}
                         title="${canWrite ? '' : 'Read-only access'}">
-                  ${buildProviderOptionsHtml(currentClinicId, currentProviderId)}
+                  ${buildAllProviderOptionsHtml(currentProviderId)}
                 </select>
               </td>
 
@@ -3516,26 +3520,20 @@ ${isRheaProvider ? `
 
           const isRheaProvider = row.getAttribute('data-is-rhea-provider') === '1';
           if (isRheaProvider) {
-            showToast('RHEA provider uses AIERIA. Manual scribe edit is not required.', 'error');
+            showToast('RHEA provider uses AI Scribe. Manual scribe edit is not required.', 'error');
             return;
           }
 
-          row
-            .querySelectorAll('.assign-view-clinic, .assign-view-provider')
-            .forEach((el) => el.classList.add('hidden'));
+          row.querySelector('.assign-view-provider')?.classList.add('hidden');
 
-          // Show selects + save/cancel
-          const clinicSelect = row.querySelector('.assign-inline-clinic');
           const providerSelect = row.querySelector('.assign-inline-provider');
           const saveBtn = row.querySelector('.assign-inline-save');
           const cancelBtn = row.querySelector('.assign-inline-cancel');
 
-          if (clinicSelect) clinicSelect.classList.remove('hidden');
           if (providerSelect) providerSelect.classList.remove('hidden');
           if (saveBtn) saveBtn.classList.remove('hidden');
           if (cancelBtn) cancelBtn.classList.remove('hidden');
 
-          // Hide edit
           editBtn.classList.add('hidden');
           return;
         }
@@ -3546,28 +3544,18 @@ ${isRheaProvider ? `
           const row = cancelBtn.closest('tr[data-scribe-id]');
           if (!row) return;
 
-          const origClinicId = row.getAttribute('data-orig-clinic-id') || '';
           const origProviderId = row.getAttribute('data-orig-provider-id') || '';
-
-          const clinicSelect = row.querySelector('.assign-inline-clinic');
           const providerSelect = row.querySelector('.assign-inline-provider');
+          if (providerSelect) {
+            providerSelect.innerHTML = buildAllProviderOptionsHtml(origProviderId);
+            providerSelect.classList.add('hidden');
+          }
 
-          if (clinicSelect) clinicSelect.value = origClinicId;
-          if (providerSelect) providerSelect.innerHTML = buildProviderOptionsHtml(origClinicId, origProviderId);
+          row.querySelector('.assign-view-provider')?.classList.remove('hidden');
 
-          // Hide selects + save/cancel
-          row
-            .querySelectorAll(
-              '.assign-inline-clinic, .assign-inline-provider, .assign-inline-save, .assign-inline-cancel'
-            )
-            .forEach((el) => el.classList.add('hidden'));
+          row.querySelector('.assign-inline-save')?.classList.add('hidden');
+          row.querySelector('.assign-inline-cancel')?.classList.add('hidden');
 
-          // Show view spans
-          row
-            .querySelectorAll('.assign-view-clinic, .assign-view-provider')
-            .forEach((el) => el.classList.remove('hidden'));
-
-          // Show edit
           const editBtn = row.querySelector('.assign-inline-edit');
           if (editBtn) editBtn.classList.remove('hidden');
 
