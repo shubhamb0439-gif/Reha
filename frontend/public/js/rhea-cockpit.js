@@ -1402,15 +1402,14 @@
   }
 
   async function fetchMeDoctorAndScribeIds() {
-    if (state.me?.doctorId && state.me?.scribeId) return { doctorId: state.me.doctorId, scribeId: state.me.scribeId };
+    if (state.me?.doctorId) return { doctorId: state.me.doctorId, scribeId: null };
     const meRes = await fetch('/api/platform/me', { credentials: 'include' });
     if (!meRes.ok) throw new Error(`Failed to load /api/platform/me (${meRes.status})`);
     const me = await meRes.json();
     state.me = me || null;
     const doctorId = me?.doctorId ?? null;
-    const scribeId = me?.scribeId ?? null;
-    if (!doctorId || !scribeId) throw new Error('Missing doctorId/scribeId from /api/platform/me');
-    return { doctorId, scribeId };
+    if (!doctorId) throw new Error('Missing doctorId from /api/platform/me');
+    return { doctorId, scribeId: null };
   }
 
   async function fetchPatientIdByMrn(mrn) {
@@ -1562,6 +1561,7 @@
         const typedMrn = String(dom.mrnInput?.value || '').trim();
         if (typedMrn) await searchPatientByMrn(typedMrn);
         else if (state.currentPatient?.mrn_no) await searchPatientByMrn(state.currentPatient.mrn_no);
+        await generateAiDiagnosisForActiveTranscript();
       });
     }
 
@@ -1578,21 +1578,19 @@
           persistActiveNoteFromUI();
           const mrn = getCurrentMrnForEhrSave();
           if (!mrn) throw new Error('Missing MRN. Please enter/select a patient MRN before saving to EHR.');
-          const { doctorId, scribeId } = await fetchMeDoctorAndScribeIds();
+          const { doctorId } = await fetchMeDoctorAndScribeIds();
           const { patientId } = await fetchPatientIdByMrn(mrn);
           let note = state.latestSoapNote || {};
           note = syncTemplateRowsFromSections(note);
           if (!isTemplateDrivenNoteEligible(note)) throw new Error('Template-driven note is not eligible for EHR save.');
-          const totalEdits = getTotalEditsFromNote(note);
-          const modifiedBy = totalEdits > 0 ? scribeId : doctorId;
           const ts = new Date().toISOString();
-          const payload = buildTemplateEhrSavePayload({ patientId, doctorId, scribeId, modifiedBy, timestamp: ts, note });
+          const payload = buildTemplateEhrSavePayload({ patientId, doctorId, scribeId: null, modifiedBy: doctorId, timestamp: ts, note });
           const saveRes = await saveTemplateNoteToEHR(payload);
           const noteId = saveRes?.note_id ?? saveRes?.patient_note_id ?? saveRes?.id ?? null;
           await swalSuccessSaved(noteId);
           if (mrn && state.summaryCacheByMrn.has(mrn)) state.summaryCacheByMrn.delete(mrn);
           clearActiveTranscriptAfterEhrSave();
-          window.dispatchEvent(new CustomEvent('ehr_note_saved', { detail: { mrn, patientId, doctorId, scribeId, noteId, timestamp: ts } }));
+          window.dispatchEvent(new CustomEvent('ehr_note_saved', { detail: { mrn, patientId, doctorId, noteId, timestamp: ts } }));
         } catch (e) {
           await swalError(e?.message || e);
         } finally {
