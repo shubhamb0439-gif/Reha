@@ -765,6 +765,11 @@ function createSignaling() {
             setStatus(true);
             msg('System', 'Connected to server');
             console.log('[VISION DEVICE] ✅ Connected - Socket ID:', signaling?.socket?.id);
+
+            try {
+                window.RheaCockpit?.setSocket(signaling.socket, ANDROID_XR_ID);
+                window.RheaCockpit?.setServerUrl(SERVER_URL);
+            } catch { }
             console.log('[VISION DEVICE] ✅ onPlayAudio handler registered:', !!signaling.listener?.onPlayAudio);
             console.log('[VISION DEVICE] ✅ Socket play_audio listeners:', signaling?.socket?.listeners('play_audio')?.length || 0);
 
@@ -856,6 +861,9 @@ function createSignaling() {
                 msg('System', `🎯 Room joined.`);
             }
 
+            try {
+                window.RheaCockpit?.setSocket(signaling.socket, ANDROID_XR_ID);
+            } catch { }
         },
 
         // Same "signal" handling as MainActivity.kt
