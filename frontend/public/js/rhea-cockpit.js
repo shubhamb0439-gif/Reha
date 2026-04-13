@@ -365,7 +365,12 @@
 
   function renderSoapBlank() {
     const scroller = soapContainerEnsure();
-    scroller.innerHTML = '<div class="scribe-ai-center"><div class="scribe-ai-empty">No note generated yet. Start or select a transcription.</div></div>';
+    scroller.innerHTML = `
+      <div class="scribe-soap-blank">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(148,163,184,0.6)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <div class="scribe-soap-blank-title">No Note Generated</div>
+        <div class="scribe-soap-blank-sub">Select a note type from the dropdown above to generate a note<br>for this transcription.</div>
+      </div>`;
     updateTotalsAndEhrState();
   }
 
@@ -631,9 +636,17 @@
     });
   }
 
+  const UI_HIDDEN_KEYS = new Set(['rowforpatient', 'rowForPatient', 'row_for_patient', '_rowsForPatientNoteInsert']);
+
   function getSoapSections(note) {
     if (!note) return [];
-    return Object.keys(note).filter((k) => !k.startsWith('_') && typeof note[k] !== 'object' || Array.isArray(note[k]));
+    return Object.keys(note).filter((k) => {
+      if (k.startsWith('_')) return false;
+      if (UI_HIDDEN_KEYS.has(k)) return false;
+      const v = note[k];
+      if (Array.isArray(v)) return true;
+      return typeof v !== 'object';
+    });
   }
 
   function isTemplateDrivenNoteEligible(note) {
@@ -726,7 +739,7 @@
   // =====================================================================================
   function clearAiDiagnosisPaneUi() {
     if (dom.aiDiagnosisBody) {
-      dom.aiDiagnosisBody.innerHTML = '<div class="scribe-ai-empty">AI diagnosis not available yet.</div>';
+      dom.aiDiagnosisBody.innerHTML = '<div class="scribe-ai-empty">No data available</div>';
     }
   }
 
@@ -1171,18 +1184,65 @@
     const speakerBtn = document.getElementById('speakerBtn');
     if (speakerBtn) {
       speakerBtn.onmouseover = () => speakerBtn.style.background = '#1d4ed8';
-      speakerBtn.onmouseout = () => speakerBtn.style.background = '#2563eb';
-      speakerBtn.onclick = () => playSummaryAudio(raw);
+      speakerBtn.onmouseout = () => speakerBtn.style.background = state.audioState === 'playing' ? '#1d4ed8' : '#2563eb';
+      speakerBtn.onclick = () => playSummaryAudio(raw, false);
+      updateSpeakerBtnState(speakerBtn, state.audioState === 'playing' ? 'playing' : 'stopped');
     }
   }
 
-  async function playSummaryAudio(text) {
-    if (state.audioPlaying) {
-      const Swal2 = getSwal();
-      if (Swal2) Swal2.fire({ icon: 'warning', title: 'Audio Playing', text: 'Please wait for current audio to finish.', timer: 2000 });
-      return;
-    }
+  // =====================================================================================
+  //  LOCAL TTS AUDIO (single HTML5 Audio instance, play/pause/resume)
+  // =====================================================================================
+  const localAudio = new Audio();
+  localAudio.preload = 'auto';
 
+  function updateSpeakerBtnState(speakerBtn, audioState) {
+    if (!speakerBtn) return;
+    const icons = {
+      play: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>`,
+      pause: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`,
+      loading: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+    };
+    if (audioState === 'loading') {
+      speakerBtn.disabled = true;
+      speakerBtn.style.opacity = '0.6';
+      speakerBtn.innerHTML = icons.loading + ' Generating...';
+    } else if (audioState === 'playing') {
+      speakerBtn.disabled = false;
+      speakerBtn.style.opacity = '1';
+      speakerBtn.innerHTML = icons.pause + ' Pause';
+    } else {
+      speakerBtn.disabled = false;
+      speakerBtn.style.opacity = '1';
+      speakerBtn.innerHTML = icons.play + ' Play';
+    }
+  }
+
+  localAudio.addEventListener('ended', () => {
+    state.audioState = 'stopped';
+    state.audioPlaying = false;
+    state.currentPlayingMrn = null;
+    const btn = document.getElementById('speakerBtn');
+    updateSpeakerBtnState(btn, 'stopped');
+  });
+
+  localAudio.addEventListener('pause', () => {
+    if (state.audioState === 'playing') {
+      state.audioState = 'paused';
+      state.audioPlaying = false;
+      const btn = document.getElementById('speakerBtn');
+      updateSpeakerBtnState(btn, 'paused');
+    }
+  });
+
+  localAudio.addEventListener('play', () => {
+    state.audioState = 'playing';
+    state.audioPlaying = true;
+    const btn = document.getElementById('speakerBtn');
+    updateSpeakerBtnState(btn, 'playing');
+  });
+
+  async function playSummaryAudio(text, autoPlay) {
     let textToSend = typeof text === 'object' && text !== null
       ? (text.text || text.content || JSON.stringify(text))
       : text;
@@ -1195,11 +1255,25 @@
     }
 
     const speakerBtn = document.getElementById('speakerBtn');
-    if (speakerBtn) {
-      speakerBtn.disabled = true;
-      speakerBtn.style.opacity = '0.6';
-      speakerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Generating...`;
+
+    if (state.audioState === 'playing' && !autoPlay) {
+      localAudio.pause();
+      updateSpeakerBtnState(speakerBtn, 'paused');
+      return;
     }
+
+    if (state.audioState === 'paused' && localAudio.src && !autoPlay) {
+      localAudio.play().catch(() => {});
+      return;
+    }
+
+    if (!autoPlay) {
+      localAudio.pause();
+      localAudio.currentTime = 0;
+    }
+
+    updateSpeakerBtnState(speakerBtn, 'loading');
+    state.currentPlayingMrn = state.currentPatient?.mrn_no || null;
 
     const SERVER_URL = getServerUrl();
 
@@ -1214,28 +1288,27 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || 'Failed to generate audio');
 
-      const socket = state.socket || window.RheaSocket;
-      if (socket && socket.connected) {
-        if (speakerBtn) {
-          speakerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg> Playing`;
-        }
-        socket.emit('play_audio_on_device', { audio: data.audio, contentType: data.contentType || 'audio/mpeg', room: state.currentRoom });
+      if (data.audio) {
+        const contentType = data.contentType || 'audio/mpeg';
+        const byteChars = atob(data.audio);
+        const byteNums = new Array(byteChars.length);
+        for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
+        const blob = new Blob([new Uint8Array(byteNums)], { type: contentType });
+        const oldSrc = localAudio.src;
+        if (oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
+        localAudio.src = URL.createObjectURL(blob);
+        localAudio.currentTime = 0;
+        await localAudio.play();
         state.audioState = 'playing';
         state.audioPlaying = true;
-        state.currentPlayingMrn = state.currentPatient?.mrn_no || null;
-        const Swal2 = getSwal();
-        if (Swal2) Swal2.fire({ icon: 'success', title: 'Audio Sent', text: 'Audio is now playing on the device.', timer: 2000 });
-      } else {
-        throw new Error('Not connected to server');
+        updateSpeakerBtnState(speakerBtn, 'playing');
       }
     } catch (err) {
+      state.audioState = 'stopped';
+      state.audioPlaying = false;
+      updateSpeakerBtnState(speakerBtn, 'stopped');
       const Swal2 = getSwal();
       if (Swal2) Swal2.fire({ icon: 'error', title: 'Audio Error', text: err.message || 'Failed to generate or play audio.' });
-      if (speakerBtn) {
-        speakerBtn.disabled = false;
-        speakerBtn.style.opacity = '1';
-        speakerBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg> Play`;
-      }
     }
   }
 
@@ -1248,7 +1321,7 @@
     const cached = state.summaryCacheByMrn.get(mrn);
     if (cached?.text) {
       renderSummaryDetail(cached.text, cached.template_title || 'Summary Note');
-      if (autoPlay) setTimeout(() => { const btn = document.getElementById('speakerBtn'); if (btn && !state.audioPlaying) btn.click(); }, 1000);
+      if (autoPlay && !state.audioPlaying) setTimeout(() => playSummaryAudio(cached.text, true), 800);
       return;
     }
 
@@ -1264,7 +1337,7 @@
       stopSummaryTimer();
       state.summaryCacheByMrn.set(mrn, { text: data?.text, template_title: data?.template_title || 'Summary Note', fetchedAt: Date.now() });
       renderSummaryDetail(data?.text, data?.template_title || 'Summary Note');
-      if (autoPlay) setTimeout(() => { const btn = document.getElementById('speakerBtn'); if (btn && !state.audioPlaying) btn.click(); }, 1000);
+      if (autoPlay && !state.audioPlaying) setTimeout(() => playSummaryAudio(data?.text, true), 800);
     } catch (e) {
       stopSummaryTimer();
       dom.noteDetail.innerHTML = `<div class="text-red-500 text-sm">${escapeHtmlEhr(e?.message || 'Failed to generate summary')}</div>`;
@@ -1533,6 +1606,78 @@
     updateTotalsAndEhrState();
   }
 
+  // =====================================================================================
+  //  AI PANE MAXIMIZE / MINIMIZE
+  // =====================================================================================
+  function wireAiPaneControls() {
+    const aiPane = document.getElementById('aiPane');
+    const minimizeBtn = document.getElementById('aiPaneMinimize');
+    const maximizeBtn = document.getElementById('aiPaneMaximize');
+    if (!aiPane || !minimizeBtn || !maximizeBtn) return;
+
+    minimizeBtn.addEventListener('click', () => {
+      if (aiPane.classList.contains('ai-pane-minimized')) {
+        aiPane.classList.remove('ai-pane-minimized');
+        minimizeBtn.title = 'Minimize AI pane';
+      } else {
+        aiPane.classList.add('ai-pane-minimized');
+        aiPane.classList.remove('ai-pane-maximized');
+        minimizeBtn.title = 'Restore AI pane';
+      }
+    });
+
+    maximizeBtn.addEventListener('click', () => {
+      if (aiPane.classList.contains('ai-pane-maximized')) {
+        aiPane.classList.remove('ai-pane-maximized');
+        maximizeBtn.innerHTML = '&#9650;';
+        maximizeBtn.title = 'Maximize AI pane';
+      } else {
+        aiPane.classList.add('ai-pane-maximized');
+        aiPane.classList.remove('ai-pane-minimized');
+        maximizeBtn.innerHTML = '&#9660;';
+        maximizeBtn.title = 'Restore AI pane';
+      }
+    });
+  }
+
+  // =====================================================================================
+  //  EHR SIDEBAR BODY-SHIFT + RESIZE
+  // =====================================================================================
+  function wireEhrBodyShift() {
+    const sidebar = document.getElementById('ehrSidebar');
+    const resizeHandle = sidebar ? sidebar.querySelector('.ehr-resize-handle') : null;
+    if (!sidebar || !resizeHandle) return;
+
+    const observer = new MutationObserver(() => {
+      const open = sidebar.classList.contains('active');
+      document.body.classList.toggle('ehr-open', open);
+    });
+    observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+
+    let dragging = false, startX = 0, startW = 0;
+    resizeHandle.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      resizeHandle.setPointerCapture(e.pointerId);
+      dragging = true;
+      startX = e.clientX;
+      startW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ehr-sidebar-w'), 10) || 550;
+      document.body.classList.add('is-resizing');
+      document.body.dataset.resizeOrientation = 'vertical';
+    });
+    resizeHandle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const delta = startX - e.clientX;
+      const newW = Math.max(300, Math.min(window.innerWidth * 0.75, startW + delta));
+      document.documentElement.style.setProperty('--ehr-sidebar-w', newW + 'px');
+    });
+    resizeHandle.addEventListener('pointerup', () => {
+      dragging = false;
+      document.body.classList.remove('is-resizing');
+      delete document.body.dataset.resizeOrientation;
+    });
+  }
+
   function wireEhrSidebar() {
     if (dom.ehrButton && dom.ehrSidebar) {
       dom.ehrButton.onclick = () => {
@@ -1731,6 +1876,8 @@
     initTemplateDropdown();
     wireSoapActionButtons();
     wireEhrSidebar();
+    wireEhrBodyShift();
+    wireAiPaneControls();
     wireNoteHistoryPanel();
     wireRheaSoapAiResize();
 

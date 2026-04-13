@@ -4,7 +4,7 @@ html,body{
   width:100%;height:100%;
   min-height:100vh;
   min-height:100dvh;
-  background:linear-gradient(170deg, #e8d5f5 0%, #d4c4e8 25%, #c9b8e0 50%, #d1c0ea 75%, #e0d0f0 100%);
+  background:#1a202c;
   display:flex;justify-content:center;align-items:stretch;
   overflow:hidden;
   font-family:'Exo 2','Segoe UI',system-ui,sans-serif;
@@ -24,7 +24,7 @@ html,body{
   min-height:100dvh;
   max-width:100%;
   max-height:100%;
-  background:linear-gradient(170deg, #e8d5f5 0%, #d8c6ec 30%, #c9b8e0 60%, #d4c4ea 100%);
+  background:#1a202c;
   overflow:hidden;
   border-radius:0;
   flex-shrink:0;
@@ -39,7 +39,23 @@ html,body{
 
 :root{
   --ehr-sidebar-w: 550px;
+  --splitter-size: 8px;
+  --splitter-hit: 12px;
+  --ehr-handle-hit: 18px;
+  --ehr-handle-line: 2px;
+  --ehr-handle-color: rgba(99,102,241,.9);
 }
+
+.rhea-cockpit-root{
+  transition: padding-right 0.35s ease;
+  will-change: padding-right;
+}
+
+@media (min-width: 768px){
+  body.ehr-open .rhea-cockpit-root{ padding-right: var(--ehr-sidebar-w); }
+}
+
+body.is-resizing .rhea-cockpit-root{ transition: none !important; }
 
 .hc-header{
   position:absolute;
@@ -48,7 +64,10 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:16px 20px 12px;
+  padding:12px 20px;
+  background:rgba(15,23,42,0.97);
+  border-bottom:1px solid rgba(255,255,255,0.07);
+  height:56px;
 }
 
 .hc-logo{
@@ -126,7 +145,7 @@ html,body{
 .hc-doctor-name{
   font-size:14px;
   font-weight:600;
-  color:#2d1b4e;
+  color:#e5e7eb;
   max-width:120px;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -861,16 +880,17 @@ html,body{
 /* Root container — slides in from right on swipe */
 .rhea-cockpit-root{
   position:absolute;
-  inset:88px 0 114px 0;
+  inset:56px 0 0 0;
   z-index:15;
   display:flex;
   flex-direction:row;
   opacity:0;
   transform:translateX(110%);
   pointer-events:none;
-  transition:transform 0.28s ease, opacity 0.22s ease;
+  transition:transform 0.28s ease, opacity 0.22s ease, padding-right 0.35s ease;
   border-radius:0;
   overflow:hidden;
+  will-change:padding-right;
 }
 
 .rhea-cockpit-root.active{
@@ -1362,12 +1382,58 @@ body.is-resizing *{ user-select:none !important; }
 .scribe-ai-head{
   display:flex;
   align-items:center;
-  justify-content:center;
+  justify-content:space-between;
   padding:10px 12px;
   border-bottom:1px solid rgba(255,255,255,0.06);
+  flex-shrink:0;
 }
 
-.scribe-ai-title{ margin:0; }
+.scribe-ai-title{ margin:0; flex:1; text-align:center; }
+
+.ai-pane-controls{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  flex-shrink:0;
+}
+
+.ai-pane-ctrl-btn{
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.15);
+  border-radius:6px;
+  color:rgba(255,255,255,0.65);
+  width:24px;
+  height:24px;
+  font-size:14px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  transition:background 0.15s, color 0.15s;
+  padding:0;
+  line-height:1;
+}
+
+.ai-pane-ctrl-btn:hover{
+  background:rgba(99,102,241,0.20);
+  color:#fff;
+  border-color:rgba(99,102,241,0.50);
+}
+
+#aiPane.ai-pane-maximized{
+  flex:1 1 auto !important;
+  min-height:0 !important;
+}
+
+#aiPane.ai-pane-minimized{
+  flex:0 0 40px !important;
+  min-height:40px !important;
+  overflow:hidden;
+}
+
+#aiPane.ai-pane-minimized .scribe-ai-body{
+  display:none;
+}
 
 .scribe-ai-body{
   flex:1 1 auto;
@@ -1419,6 +1485,29 @@ body.is-resizing *{ user-select:none !important; }
   height:100%;
   min-height:80px;
   padding:16px;
+}
+
+.scribe-soap-blank{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:200px;
+  gap:12px;
+  padding:32px 24px;
+  text-align:center;
+}
+
+.scribe-soap-blank-title{
+  font-size:14px;
+  font-weight:700;
+  color:rgba(203,213,225,0.85);
+}
+
+.scribe-soap-blank-sub{
+  font-size:12px;
+  color:rgba(148,163,184,0.65);
+  line-height:1.6;
 }
 
 .scribe-ai-loading{
@@ -1473,16 +1562,21 @@ body.is-resizing *{ user-select:none !important; }
   position:fixed;
   top:0;
   bottom:0;
-  right:calc(var(--ehr-sidebar-w) - 9px);
-  width:18px;
+  right:calc(var(--ehr-sidebar-w) - (var(--ehr-handle-hit) / 2));
+  width:var(--ehr-handle-hit);
   z-index:1000;
   display:none;
   background:transparent !important;
   box-shadow:none !important;
   outline:none !important;
+  cursor:col-resize;
 }
 
 .ehr-sidebar.active .ehr-resize-handle{ display:block; }
+
+.ehr-resize-handle::before{
+  content:none !important;
+}
 
 .ehr-resize-handle::after{
   content:"";
@@ -1490,15 +1584,16 @@ body.is-resizing *{ user-select:none !important; }
   left:50%;
   top:50%;
   transform:translate(-50%, -50%);
-  width:2px;
+  width:var(--ehr-handle-line);
   height:58px;
   border-radius:999px;
-  background:rgba(99,102,241,.9);
+  background:var(--ehr-handle-color);
   opacity:1;
 }
 
 .ehr-resize-handle:hover::after,
-.ehr-resize-handle:focus::after{
+.ehr-resize-handle:focus::after,
+body.is-resizing .ehr-resize-handle::after{
   height:66px;
   background:rgba(99,102,241,1);
 }
@@ -1736,7 +1831,7 @@ body.is-resizing *{ user-select:none !important; }
   }
 
   .rhea-cockpit-root{
-    inset:72px 0 108px 0;
+    inset:56px 0 0 0;
   }
 
   /* Collapse Note History by default on small screens */
