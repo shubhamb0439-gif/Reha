@@ -419,8 +419,15 @@
 
   if (hcStreamPauseBtn) {
     hcStreamPauseBtn.addEventListener('click', function () {
-      hcStreamPauseBtn.classList.toggle('active');
-      hcStreamPauseBtn.textContent = hcStreamPauseBtn.classList.contains('active') ? 'Resume' : 'Pause';
+      if (typeof window._xrToggleAudio === 'function') {
+        window._xrToggleAudio();
+        var isPaused = !!window._xrAudioPaused;
+        hcStreamPauseBtn.classList.toggle('active', isPaused);
+        hcStreamPauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+      } else {
+        hcStreamPauseBtn.classList.toggle('active');
+        hcStreamPauseBtn.textContent = hcStreamPauseBtn.classList.contains('active') ? 'Resume' : 'Pause';
+      }
     });
   }
 
