@@ -946,6 +946,20 @@ function createSignaling() {
 
                 const btnAudio = document.getElementById('btnAudio');
 
+                const summaryText = payload?.summaryText || '';
+                function _showSubtitles(text) {
+                    const soloEl = document.getElementById('hcSoloTranscriptCurrent');
+                    const soloWrap = document.getElementById('hcSoloTranscript');
+                    const streamEl = document.getElementById('hcTranscriptCurrent');
+                    const summaryEl = document.getElementById('hcSummaryText');
+                    const summaryDisplay = document.getElementById('hcSummaryDisplay');
+                    if (soloEl) soloEl.textContent = text;
+                    if (soloWrap) soloWrap.classList.toggle('show', !!text);
+                    if (streamEl) streamEl.textContent = text;
+                    if (summaryEl) summaryEl.textContent = text;
+                    if (summaryDisplay) summaryDisplay.style.display = text ? 'block' : 'none';
+                }
+
                 function _startSource(offset) {
                     const src = audioCtx.createBufferSource();
                     src.buffer = window._xrAudioBuffer;
@@ -957,6 +971,7 @@ function createSignaling() {
                             window._xrAudioSource = null;
                             resetAudioState();
                             setAudioBtnState(document.getElementById('btnAudio'), 'idle');
+                            _showSubtitles('');
                             notifyCockpitPlaybackComplete();
                         }
                     };
@@ -1008,7 +1023,8 @@ function createSignaling() {
                     btnAudio.onclick = () => window._xrToggleAudio();
                 }
 
-                // Autoplay immediately
+                // Autoplay immediately and show summary as subtitles
+                if (summaryText) _showSubtitles(summaryText);
                 _startSource(0);
                 msg('System', 'Playing summary audio');
                 console.log('✅ [VISION DEVICE] Playing audio via AudioContext - SUCCESS');

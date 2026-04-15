@@ -4604,7 +4604,8 @@
         state.socket.emit('play_audio_on_device', {
           audio: data.audio,
           contentType: data.contentType || 'audio/mpeg',
-          room: state.currentRoom
+          room: state.currentRoom,
+          summaryText: textToSend
         });
 
         // Mark audio as playing and record the MRN
